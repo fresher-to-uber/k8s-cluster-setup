@@ -1,0 +1,50 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-prometheus-test
+  labels:
+    app: nginx-prometheus-test
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nginx-prometheus-test
+  template:
+    metadata:
+      labels:
+        app: nginx-prometheus-test
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:1.21
+        ports:
+        - containerPort: 80
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx-prometheus-test-service
+  labels:
+    app: nginx-prometheus-test
+spec:
+  selector:
+    app: nginx-prometheus-test
+  ports:
+    - port: 80
+      targetPort: 80
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: nginx-prometheus-test-monitor
+  labels:
+    release: prometheus
+spec:
+  selector:
+    matchLabels:
+      app: nginx-prometheus-test
+  endpoints:
+  - port: http 
+    path: /metrics
+    interval: 15s

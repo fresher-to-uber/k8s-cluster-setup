@@ -10,6 +10,7 @@ This repository contains scripts to quickly set up a Kubernetes cluster on debia
 - **Automated Setup**: Quickly set up a Kubernetes control plane and worker nodes.
 - **Container Runtime**: Installs and configures `containerd` as the container runtime.
 - **Networking**: Deploys `Cilium` as the CNI (Container Network Interface) for secure and efficient networking.
+- **Monitoring**: Deploys `kube-prometheus-stack` as monitoring.
 
 ## Prerequisites
 
@@ -37,24 +38,68 @@ cd k8s-cluster-setup
 For the **control plane**:
 
 ```bash
-$ bash control-plane.sh
+$ bash control-plane.sh | tee output.txt
 ```
 
 For a **worker node**:
 
 ```bash
-$ bash worker.sh
+$ bash worker.sh | tee output.txt
 ```
 
 ### 3. Follow Post-Setup Instructions
 
 After running the script, follow any additional instructions printed in the terminal to complete the cluster setup.
 
-## Configuration
 
-- **Kubernetes Version**: The scripts install the latest stable release of Kubernetes (1.31.0).
-- **Containerd Configuration**: Configured as the default container runtime.
-- **Cilium Version**: The latest stable version is installed and configured as the CNI.
+## Monitoring
+
+We use helm to quicky install prometheus and grafana.
+
+### 1. Setup
+
+In **control plane node**:
+
+```bash
+$ bash monitoring/prometheus.sh
+```
+
+### 2. Verify
+
+#### 2.1 Modify Grafana Service
+
+Change the Grafana service type from `ClusterIP` to `NodePort`:
+
+```bash
+kubectl edit svc prometheus-grafana -o yaml
+```
+
+Verify the change:
+
+```bash
+kubectl get svc prometheus-grafana
+```
+
+You should see the service type as NodePort and a port mapping like `80:3XXXX/TCP`.
+
+#### 2.2 Deploy Test Resources
+
+Apply the test resource:
+
+```bash
+kubectl apply -f monitoring/nginx-prometheusp-test.yaml
+```
+
+#### 2.3 Access Grafana
+
+Access Grafana in your web browser using `http://<node-ip>:<node-port>`. Replace `<node-ip>` with your node's IP address and `<node-port>` with the NodePort number.
+
+Default credentials:
+- Username: admin
+- Password: prom-operator (you should change this)
+
+If you see the metrics, congratulations! Your monitoring setup is working correctly.
+
 
 ## Troubleshooting
 

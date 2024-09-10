@@ -29,7 +29,7 @@ Ensure you have the following:
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/your-username/k8s-cluster-setup.git
+git clone https://github.com/fresher-to-uber/k8s-cluster-setup.git
 cd k8s-cluster-setup
 ```
 

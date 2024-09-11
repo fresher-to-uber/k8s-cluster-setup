@@ -11,6 +11,7 @@ This repository contains scripts to quickly set up a Kubernetes cluster on debia
 - **Container Runtime**: Installs and configures `containerd` as the container runtime.
 - **Networking**: Deploys `Cilium` as the CNI (Container Network Interface) for secure and efficient networking.
 - **Monitoring**: Deploys `kube-prometheus-stack` as monitoring.
+- **Service Mesh**: Deploys `linkerd` as service mesh.
 
 ## Prerequisites
 
@@ -29,7 +30,7 @@ Ensure you have the following:
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/fresher-to-uber/k8s-cluster-setup.git
+git clone https://github.com/your-username/k8s-cluster-setup.git
 cd k8s-cluster-setup
 ```
 
@@ -51,7 +52,6 @@ $ bash worker.sh | tee output.txt
 
 After running the script, follow any additional instructions printed in the terminal to complete the cluster setup.
 
-
 ## Monitoring
 
 We use helm to quicky install prometheus and grafana.
@@ -71,13 +71,13 @@ $ bash monitoring/prometheus.sh
 Change the Grafana service type from `ClusterIP` to `NodePort`:
 
 ```bash
-kubectl edit svc prometheus-grafana -o yaml
+kubectl edit svc prometheus-grafana -n monitoring -o yaml
 ```
 
 Verify the change:
 
 ```bash
-kubectl get svc prometheus-grafana
+kubectl get svc prometheus-grafana -n monitoring
 ```
 
 You should see the service type as NodePort and a port mapping like `80:3XXXX/TCP`.
@@ -100,6 +100,45 @@ Default credentials:
 
 If you see the metrics, congratulations! Your monitoring setup is working correctly.
 
+## Service Mesh
+
+### Prerequisites
+- [Need to setup monitoring first](#monitoring)
+
+### 1. Setup
+
+#### 1.1 Run each command in `linkerd/setup.txt` file.
+Observe and make sure the output is success with green check mark.
+
+#### 1.2 Update Prometheus scrape configuration
+```bash
+helm upgrade prometheus prometheus-community/kube-prometheus-stack -n monitoring -f linkerd/prometheus-scrape-configs.yaml
+```
+
+#### 1.3 Edit Linkerd Dashboard to allow outside access
+```bash
+kubectl -n linkerd-viz edit deploy web
+```
+In `spec.template.spec.containers.args` section, set `-enforced-host` to empty
+
+### 2. Verify
+#### 2.1 Modify Linkerd Dashboard Service
+
+Change the web service type from `ClusterIP` to `NodePort`:
+
+```bash
+kubectl edit svc web -n linkerd-viz -o yaml
+```
+
+Verify the change:
+
+```bash
+kubectl get svc web -n linkerd-viz
+```
+
+You should see the service type as NodePort and a port mapping like `80:3XXXX/TCP`.
+
+Access Linkerd in your web browser using `http://<node-ip>:<node-port>`. Replace `<node-ip>` with your node's IP address and `<node-port>` with the NodePort number.
 
 ## Troubleshooting
 

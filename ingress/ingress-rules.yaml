@@ -1,0 +1,57 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: prometheus-ingress
+  annotations:
+    nginx.ingress.kubernetes.io/service-upstream: "true"
+  namespace: monitoring
+
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: dev.grafana.local
+    http:
+      paths:
+      - backend:
+          service:
+            name: prometheus-grafana
+            port:
+              number: 80
+        path: /
+        pathType: ImplementationSpecific
+  - host: dev.prometheus.local
+    http:
+      paths:
+      - backend:
+          service:
+            name: prometheus-kube-prometheus-prometheus
+            port:
+              number: 9090
+        path: /
+        pathType: ImplementationSpecific
+status:
+  loadBalancer: {}
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: linkerd-ingress
+  annotations:
+    nginx.ingress.kubernetes.io/service-upstream: "true"
+  namespace: linkerd-viz
+
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: dev.linkerd.local
+    http:
+      paths:
+      - backend:
+          service:
+            name: web
+            port:
+              number: 8084
+        path: /
+        pathType: ImplementationSpecific
+status:
+  loadBalancer: {}

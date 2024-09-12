@@ -2,16 +2,19 @@
 
 This repository contains scripts to quickly set up a Kubernetes cluster on debian-based os for local development or home server. The scripts handle the installation of Kubernetes, containerd, and Cilium, and have been tested on the following platforms:
 
-- **Debian 12 (ARM64)**
-- **Ubuntu 24.04 (AMD64)**
+| OS       | Arch  | Env |
+| -------- | ----- | ------ |
+| Debian 12 | arm64 | raspberry pi cluster    |
+| Ubuntu 24.04 | amd64 | VMware cluster    |
 
 ## Features
 
 - **Automated Setup**: Quickly set up a Kubernetes control plane and worker nodes.
 - **Container Runtime**: Installs and configures `containerd` as the container runtime.
 - **Networking**: Deploys `Cilium` as the CNI (Container Network Interface) for secure and efficient networking.
-- **Monitoring**: Deploys `kube-prometheus-stack` as monitoring.
-- **Service Mesh**: Deploys `linkerd` as service mesh.
+- [**Monitoring**](#monitoring): Deploys `kube-prometheus-stack` as monitoring.
+- [**Service Mesh**](#service-mesh): Deploys `linkerd` as service mesh.
+- [**Ingress**](#ingress): Deploys `ingress-nginx` as ingress controller.
 
 ## Prerequisites
 
@@ -92,7 +95,7 @@ kubectl apply -f monitoring/nginx-prometheusp-test.yaml
 
 #### 2.3 Access Grafana
 
-Access Grafana in your web browser using `http://<node-ip>:<node-port>`. Replace `<node-ip>` with your node's IP address and `<node-port>` with the NodePort number.
+Access Grafana in your local machine (same network with your cluster) using `http://<node-ip>:<node-port>`. Replace `<node-ip>` with your node's IP address and `<node-port>` with the NodePort number.
 
 Default credentials:
 - Username: admin
@@ -138,7 +141,79 @@ kubectl get svc web -n linkerd-viz
 
 You should see the service type as NodePort and a port mapping like `80:3XXXX/TCP`.
 
-Access Linkerd in your web browser using `http://<node-ip>:<node-port>`. Replace `<node-ip>` with your node's IP address and `<node-port>` with the NodePort number.
+Access Linkerd in your local machine (same network with your cluster) using `http://<node-ip>:<node-port>`. Replace `<node-ip>` with your node's IP address and `<node-port>` with the NodePort number.
+
+## Ingress
+This setup is used for bare metal cluster (VMware, on-premise server, ...), we use the NGINX Ingress in combination with [MetalLB](https://metallb.universe.tf/).
+
+### 1. Setup
+#### 1.1 Install ingress-nginx
+- Installation with helm
+```bash
+helm upgrade --install ingress-nginx ingress-nginx \
+  --repo https://kubernetes.github.io/ingress-nginx \
+	--set controller.kind=DaemonSet \
+  --namespace ingress-nginx --create-namespace
+```
+- Inject linkerd
+```bash
+kubectl get ds ingress-nginx-controller -o yaml -n ingress-nginx | \
+linkerd inject --ingress - | kubectl apply -f -
+```
+
+#### 1.1 Install metallb
+- Enable strict ARP mode
+```bash
+kubectl get configmap kube-proxy -n kube-system -o yaml | \
+sed -e "s/strictARP: false/strictARP: true/" | \
+kubectl diff -f - -n kube-system
+```
+```bash
+kubectl get configmap kube-proxy -n kube-system -o yaml | \
+sed -e "s/strictARP: false/strictARP: true/" | \
+kubectl apply -f - -n kube-system
+```
+
+- Installation
+```bash
+helm repo add metallb https://metallb.github.io/metallb
+helm install metallb metallb/metallb --namespace metallb-system --create-namespace
+```
+
+- Configuration
+
+	**note**: replace line 9 in file `ingress/metallb-config.yaml` with your ip range (same range with your node ip and not use).
+
+	```bash
+	kubectl create -f ingress/metallb-config.yaml
+	```
+
+	you should see EXTERNAL-IP value for `ingress-nginx-controller`
+	```bash
+	kubectl get svc -n ingress-nginx
+	```
+
+### 2. Verify
+- Create ingress rules for prometheus, grafana, linkerd
+	```bash
+	kubectl create -f ingress/ingress-rules.yaml
+	```
+
+- Edit hosts file (`C:\WINDOWS\system32\drivers\etc\hosts` in Windows, `/etc/hosts` in Linux)
+	```bash
+	EXTERNAL_IP dev.prometheus.local
+	EXTERNAL_IP dev.grafana.local
+	EXTERNAL_IP dev.linkerd.local
+	```
+
+	`EXTERNAL_IP` can get from:
+	```bash
+	kubectl get svc -n ingress-nginx
+	```
+
+If you want to use different domain name, make sure you update the `host` value in `ingress/ingress-rules.yaml` file, then create the ingress.
+
+Access Grafana in your local machine (same network with your cluster) using `dev.grafana.local`.
 
 ## Troubleshooting
 

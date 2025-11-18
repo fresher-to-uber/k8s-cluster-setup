@@ -24,9 +24,13 @@ Ensure you have the following:
 	- 2 CPUs or more
 - User with `sudo` privileges or root access.
 - Basic networking setup (internet access required).
+- Disabled swap via systemd
+  - `sudo swapoff -a`
+  - `sudo systemctl mask swap.target`
+  - reboot
 - If your Linux distribution is not enable and uses cgroup v2 by default, you need to enable cgroup by modifying the kernel cmdline boot arguments.
 	- If your distribution uses GRUB, `systemd.unified_cgroup_hierarchy=1` should be added in `GRUB_CMDLINE_LINUX` under `/etc/default/grub`, followed by `sudo update-grub`.
-	-	If your distribution uses systemd, add `cgroup_memory=1 cgroup_enable=memory` to the end of `/proc/cmdline`, then reboot.
+	-	If your distribution uses systemd, add `cgroup_memory=1 cgroup_enable=memory` to the end of `/proc/cmdline` (in raspberry pi, it will be `/boot/firmware/cmdline.txt`), then reboot.
 
 ## Getting Started
 
